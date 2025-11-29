@@ -1,7 +1,10 @@
 // lib/app/modules/product/product_controller.dart - UPDATED VERSION
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_offline/app/core/utils/image_helper.dart';
 import 'models/product_model.dart';
 import 'repositories/product_repository.dart';
 
@@ -22,6 +25,10 @@ class ProductController extends GetxController {
   final isLoading = false.obs;
   final isLoadingMore = false.obs;
   final isSaving = false.obs;
+
+  //Image handler
+  final selectedImageFile = Rxn<File>();
+  final existingImagePath = Rxn<String>();
 
   // Form controllers
   final skuController = TextEditingController();
@@ -174,6 +181,8 @@ class ProductController extends GetxController {
     minStockController.text = '0';
     barcodeController.clear();
     selectedFormCategory.value = null;
+    selectedImageFile.value = null;
+    existingImagePath.value = null;
   }
 
   void prepareEdit(ProductModel product) {
@@ -188,6 +197,8 @@ class ProductController extends GetxController {
     minStockController.text = product.minStock.toString();
     barcodeController.text = product.barcode ?? '';
     selectedFormCategory.value = product.category;
+    selectedImageFile.value = null;
+    existingImagePath.value = product.imagePath;
   }
 
   String? validateForm() {
@@ -229,12 +240,27 @@ class ProductController extends GetxController {
       }
 
       final now = DateTime.now();
-
-      // Use selected category or text input
       final category = selectedFormCategory.value ??
           (categoryController.text.trim().isEmpty
               ? null
               : categoryController.text.trim());
+
+      // Handle image
+      String? imagePath = existingImagePath.value;
+
+      // If new image is selected, save it
+      if (selectedImageFile.value != null) {
+        // Delete old image if exists
+        if (existingImagePath.value != null) {
+          await ImageHelper.deleteImage(existingImagePath.value!);
+        }
+
+        // Save new image
+        imagePath = await ImageHelper.saveImageToLocal(
+          selectedImageFile.value!,
+          skuController.text.trim(),
+        );
+      }
 
       final product = ProductModel(
         id: editingProduct?.id,
@@ -251,6 +277,7 @@ class ProductController extends GetxController {
         barcode: barcodeController.text.trim().isEmpty
             ? null
             : barcodeController.text.trim(),
+        imagePath: imagePath,
         createdAt: editingProduct?.createdAt ?? now,
         updatedAt: now,
       );
@@ -278,6 +305,11 @@ class ProductController extends GetxController {
 
   Future<void> deleteProduct(ProductModel product) async {
     try {
+      // Delete image if exists
+      if (product.imagePath != null) {
+        await ImageHelper.deleteImage(product.imagePath!);
+      }
+
       await repository.deleteProduct(product.id!);
       Get.snackbar('Berhasil', 'Produk berhasil dihapus',
           backgroundColor: Colors.green, colorText: Colors.white);
@@ -285,6 +317,40 @@ class ProductController extends GetxController {
     } catch (e) {
       Get.snackbar('Error', 'Gagal menghapus produk: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
+    }
+  }
+
+  Future<void> pickProductImage({bool fromCamera = false}) async {
+    try {
+      final File? imageFile =
+          await ImageHelper.pickImage(fromCamera: fromCamera);
+      if (imageFile != null) {
+        selectedImageFile.value = imageFile;
+
+        Get.snackbar(
+          'Berhasil',
+          'Gambar berhasil dipilih',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 1),
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Gagal memilih gambar: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> removeProductImage() async {
+    selectedImageFile.value = null;
+
+    // If editing and removing existing image, mark for deletion
+    if (existingImagePath.value != null) {
+      existingImagePath.value = null;
     }
   }
 

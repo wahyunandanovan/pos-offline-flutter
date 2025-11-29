@@ -20,6 +20,9 @@ class PosController extends GetxController {
   var currentPage = 0;
   var hasMoreData = true.obs;
 
+//Sorting
+  final sortBy = 'popular'.obs;
+
   // Product catalog
   final products = <ProductModel>[].obs;
   final filteredProducts = <ProductModel>[].obs;
@@ -104,6 +107,9 @@ class PosController extends GetxController {
 
       products.value = result;
       filteredProducts.value = result;
+
+      applySorting();
+
       hasMoreData.value = result.length >= pageSize;
       currentPage = 1;
     } catch (e) {
@@ -128,6 +134,10 @@ class PosController extends GetxController {
       if (result.isNotEmpty) {
         products.addAll(result);
         filteredProducts.addAll(result);
+
+        // Apply sorting after adding new items
+        applySorting();
+
         currentPage++;
         hasMoreData.value = result.length >= pageSize;
       } else {
@@ -143,6 +153,45 @@ class PosController extends GetxController {
   void searchProducts(String query) {
     searchQuery.value = query;
     loadProducts(refresh: true);
+  }
+
+  int getProductQuantityInCart(int productId) {
+    final cartItem =
+        cartItems.firstWhereOrNull((item) => item.product.id == productId);
+    return cartItem?.quantity ?? 0;
+  }
+
+  void changeSortBy(String newSortBy) {
+    sortBy.value = newSortBy;
+    applySorting();
+    filteredProducts.refresh();
+  }
+
+  void applySorting() {
+    switch (sortBy.value) {
+      case 'popular':
+        // Sort by most frequently sold (you can track this in a separate table)
+        // For now, we'll use a simple heuristic: products with lower stock are more popular
+        filteredProducts.sort((a, b) {
+          // Products with less stock relative to their initial stock are more popular
+          final aPopularity = (a.stock < a.minStock * 2) ? 1 : 0;
+          final bPopularity = (b.stock < b.minStock * 2) ? 1 : 0;
+          return bPopularity.compareTo(aPopularity);
+        });
+        break;
+      case 'name':
+        filteredProducts.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'price_low':
+        filteredProducts.sort((a, b) => a.sellPrice.compareTo(b.sellPrice));
+        break;
+      case 'price_high':
+        filteredProducts.sort((a, b) => b.sellPrice.compareTo(a.sellPrice));
+        break;
+      case 'stock':
+        filteredProducts.sort((a, b) => b.stock.compareTo(a.stock));
+        break;
+    }
   }
 
   void addToCart(ProductModel product) {

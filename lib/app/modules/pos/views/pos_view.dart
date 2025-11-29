@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -18,7 +19,6 @@ class PosView extends GetView<PosController> {
       appBar: AppBar(
         title: const Text('Point of Sale'),
         actions: [
-          // Cart badge
           Obx(() => Stack(
                 children: [
                   IconButton(
@@ -100,17 +100,25 @@ class PosView extends GetView<PosController> {
       children: [
         Padding(
           padding: const EdgeInsets.all(AppTheme.spacing16),
-          child: CustomTextField(
-            hintText: 'Cari produk...',
-            prefixIcon: Icons.search,
-            onChanged: (value) {
-              Future.delayed(const Duration(milliseconds: 500), () {
-                if (controller.searchQuery.value == value) {
-                  controller.searchProducts(value);
-                }
-              });
-              controller.searchQuery.value = value;
-            },
+          child: Column(
+            children: [
+              CustomTextField(
+                hintText: 'Cari produk...',
+                prefixIcon: Icons.search,
+                onChanged: (value) {
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    if (controller.searchQuery.value == value) {
+                      controller.searchProducts(value);
+                    }
+                  });
+                  controller.searchQuery.value = value;
+                },
+              ),
+              const SizedBox(height: AppTheme.spacing12),
+
+              // SORT DROPDOWN
+              _buildSortDropdown(),
+            ],
           ),
         ),
         Expanded(
@@ -152,68 +160,198 @@ class PosView extends GetView<PosController> {
     );
   }
 
-  Widget _buildProductCard(product) {
-    return Card(
-      child: InkWell(
-        onTap: () => controller.addToCart(product),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spacing12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildSortDropdown() {
+    return Obx(() => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+          ),
+          child: Row(
             children: [
+              const Icon(Icons.sort, size: 20),
+              const SizedBox(width: 8),
+              const Text('Urutkan:', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 8),
               Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryLight.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.image_outlined,
-                      size: 48,
-                      color: AppTheme.primaryLight,
+                child: DropdownButton<String>(
+                  value: controller.sortBy.value,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'popular',
+                      child: Text('Paling Populer'),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppTheme.spacing8),
-              Text(
-                product.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: AppTheme.spacing4),
-              Text(
-                controller.currencyFormat.format(product.sellPrice),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: AppTheme.primaryLight,
-                ),
-              ),
-              Text(
-                'Stok: ${product.stock}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: product.isLowStock ? AppTheme.error : AppTheme.success,
+                    DropdownMenuItem(
+                      value: 'name',
+                      child: Text('Nama A-Z'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'price_low',
+                      child: Text('Harga Terendah'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'price_high',
+                      child: Text('Harga Tertinggi'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'stock',
+                      child: Text('Stok Terbanyak'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.changeSortBy(value);
+                    }
+                  },
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
+        ));
   }
+
+  Widget _buildProductCard(product) {
+    return Obx(() {
+      final quantityInCart = controller.getProductQuantityInCart(product.id!);
+      final hasImage =
+          product.imagePath != null && product.imagePath!.isNotEmpty;
+
+      return Card(
+        child: InkWell(
+          onTap: () => controller.addToCart(product),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppTheme.spacing12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryLight.withOpacity(0.1),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusSmall),
+                        ),
+                        child: ClipRRect(
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusSmall),
+                          child: hasImage
+                              ? Image.file(
+                                  File(product.imagePath!),
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Center(
+                                      child: Icon(
+                                        Icons.image_outlined,
+                                        size: 48,
+                                        color: AppTheme.primaryLight,
+                                      ),
+                                    );
+                                  },
+                                )
+                              : const Center(
+                                  child: Icon(
+                                    Icons.image_outlined,
+                                    size: 48,
+                                    color: AppTheme.primaryLight,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacing8),
+                    Text(
+                      product.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppTheme.spacing4),
+                    Text(
+                      controller.currencyFormat.format(product.sellPrice),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppTheme.primaryLight,
+                      ),
+                    ),
+                    Text(
+                      'Stok: ${product.stock}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: product.isLowStock
+                            ? AppTheme.error
+                            : AppTheme.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // QUANTITY BADGE IN CART
+              if (quantityInCart > 0)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppTheme.primaryLight, AppTheme.primaryDark],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryLight.withOpacity(0.5),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.shopping_cart,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$quantityInCart',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  // ... (rest of the cart methods remain the same as before)
 
   Widget _buildCartSection() {
     return Column(
       children: [
-        // Cart Header
         Container(
           padding: const EdgeInsets.all(AppTheme.spacing16),
           decoration: BoxDecoration(
@@ -250,8 +388,6 @@ class PosView extends GetView<PosController> {
             ],
           ),
         ),
-
-        // Cart Items List
         Expanded(
           child: Obx(() {
             if (controller.cartItems.isEmpty) {
@@ -293,8 +429,6 @@ class PosView extends GetView<PosController> {
             );
           }),
         ),
-
-        // Cart Summary & Checkout
         Obx(() => controller.cartItems.isEmpty
             ? const SizedBox.shrink()
             : _buildCheckoutSection()),
@@ -303,14 +437,15 @@ class PosView extends GetView<PosController> {
   }
 
   Widget _buildCartItem(item) {
+    final hasImage =
+        item.product.imagePath != null && item.product.imagePath!.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Product Info & Remove
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image
             Container(
               width: 50,
               height: 50,
@@ -318,14 +453,26 @@ class PosView extends GetView<PosController> {
                 color: AppTheme.primaryLight.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
               ),
-              child: const Icon(
-                Icons.image_outlined,
-                color: AppTheme.primaryLight,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                child: hasImage
+                    ? Image.file(
+                        File(item.product.imagePath!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.image_outlined,
+                            color: AppTheme.primaryLight,
+                          );
+                        },
+                      )
+                    : const Icon(
+                        Icons.image_outlined,
+                        color: AppTheme.primaryLight,
+                      ),
               ),
             ),
             const SizedBox(width: AppTheme.spacing12),
-
-            // Product Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,8 +505,6 @@ class PosView extends GetView<PosController> {
                 ],
               ),
             ),
-
-            // Remove Button
             IconButton(
               icon: const Icon(Icons.delete_outline, color: AppTheme.error),
               onPressed: () => controller.removeFromCart(item),
@@ -369,8 +514,6 @@ class PosView extends GetView<PosController> {
           ],
         ),
         const SizedBox(height: AppTheme.spacing12),
-
-        // Quantity Controls & Subtotal
         Container(
           padding: const EdgeInsets.all(AppTheme.spacing8),
           decoration: BoxDecoration(
@@ -379,7 +522,6 @@ class PosView extends GetView<PosController> {
           ),
           child: Row(
             children: [
-              // Quantity Controls
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -429,10 +571,7 @@ class PosView extends GetView<PosController> {
                   ],
                 ),
               ),
-
               const SizedBox(width: AppTheme.spacing8),
-
-              // Stock Info
               Text(
                 'Stok: ${item.product.stock}',
                 style: const TextStyle(
@@ -440,10 +579,7 @@ class PosView extends GetView<PosController> {
                   color: Colors.grey,
                 ),
               ),
-
               const Spacer(),
-
-              // Subtotal
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [

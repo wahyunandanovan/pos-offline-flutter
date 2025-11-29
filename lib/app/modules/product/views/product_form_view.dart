@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -22,6 +23,10 @@ class ProductFormView extends GetView<ProductController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // IMAGE UPLOAD SECTION
+            _buildImageUploadSection(context),
+            const SizedBox(height: AppTheme.spacing24),
+
             CustomTextField(
               controller: controller.skuController,
               label: 'SKU',
@@ -48,7 +53,6 @@ class ProductFormView extends GetView<ProductController> {
             ),
             const SizedBox(height: AppTheme.spacing16),
 
-            // CREATABLE SELECT FOR CATEGORY
             _buildCategorySelect(context),
             const SizedBox(height: AppTheme.spacing16),
 
@@ -127,6 +131,137 @@ class ProductFormView extends GetView<ProductController> {
     );
   }
 
+  Widget _buildImageUploadSection(BuildContext context) {
+    return Obx(() {
+      final selectedImage = controller.selectedImageFile.value;
+      final existingImage = controller.existingImagePath.value;
+      final hasImage = selectedImage != null || existingImage != null;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Gambar Produk',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacing12),
+
+          // Image Preview
+          Container(
+            height: 200,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: hasImage
+                ? Stack(
+                    children: [
+                      // Image Display
+                      ClipRRect(
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusMedium),
+                        child: selectedImage != null
+                            ? Image.file(
+                                selectedImage,
+                                width: double.infinity,
+                                height: 200,
+                                fit: BoxFit.cover,
+                              )
+                            : existingImage != null
+                                ? Image.file(
+                                    File(existingImage),
+                                    width: double.infinity,
+                                    height: 200,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Center(
+                                        child: Icon(
+                                          Icons.broken_image,
+                                          size: 64,
+                                          color: Colors.grey,
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : const SizedBox(),
+                      ),
+
+                      // Remove Button
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Material(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(20),
+                          child: InkWell(
+                            onTap: controller.removeProductImage,
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.image_outlined,
+                        size: 64,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: AppTheme.spacing8),
+                      Text(
+                        'Belum ada gambar',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: AppTheme.spacing16),
+
+          // Upload Buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () =>
+                      controller.pickProductImage(fromCamera: false),
+                  icon: const Icon(Icons.photo_library),
+                  label: const Text('Galeri'),
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacing12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () =>
+                      controller.pickProductImage(fromCamera: true),
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Kamera'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    });
+  }
+
   Widget _buildCategorySelect(BuildContext context) {
     return Obx(() {
       final categories = controller.categories;
@@ -146,8 +281,6 @@ class ProductFormView extends GetView<ProductController> {
             ],
           ),
           const SizedBox(height: AppTheme.spacing8),
-
-          // Dropdown with create option
           Container(
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
@@ -155,7 +288,6 @@ class ProductFormView extends GetView<ProductController> {
             ),
             child: Column(
               children: [
-                // Selected or Create New
                 InkWell(
                   onTap: () => _showCategoryDialog(context),
                   child: Container(
@@ -186,8 +318,6 @@ class ProductFormView extends GetView<ProductController> {
                     ),
                   ),
                 ),
-
-                // Quick category chips
                 if (categories.isNotEmpty) ...[
                   const Divider(height: 1),
                   Padding(
@@ -234,7 +364,6 @@ class ProductFormView extends GetView<ProductController> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Create new category
               TextField(
                 controller: newCategoryController,
                 decoration: InputDecoration(
@@ -260,8 +389,6 @@ class ProductFormView extends GetView<ProductController> {
                 label: const Text('Buat Kategori Baru'),
               ),
               const SizedBox(height: AppTheme.spacing16),
-
-              // Existing categories
               if (controller.categories.isNotEmpty) ...[
                 const Divider(),
                 const Text(
