@@ -36,8 +36,7 @@ dependencies:
 
   # Barcode
   barcode_widget: ^2.0.4
-  flutter_barcode_scanner:
-    ^2.0.0
+  # flutter_barcode_scanner: ^2.0.0
 
   # Permission Handler
   permission_handler: ^11.1.0
