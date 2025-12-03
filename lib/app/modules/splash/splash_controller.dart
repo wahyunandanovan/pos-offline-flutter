@@ -13,7 +13,7 @@ class SplashController extends GetxController {
     await Future.delayed(const Duration(seconds: 2));
 
     // Initialize AuthController
-    Get.put(AuthController(Get.find()));
+    Get.find<AuthController>();
     final authController = Get.find<AuthController>();
 
     await authController.checkLoginStatus();

@@ -57,6 +57,7 @@ class DBHelper {
         sellPrice REAL NOT NULL DEFAULT 0,
         stock INTEGER NOT NULL DEFAULT 0,
         minStock INTEGER DEFAULT 0,
+        soldQuantity INTEGER NOT NULL DEFAULT 0,
         barcode TEXT,
         imagePath TEXT,
         isActive INTEGER NOT NULL DEFAULT 1,

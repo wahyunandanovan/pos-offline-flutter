@@ -22,6 +22,9 @@ class ProductRepository {
   Future<List<String>> getCategories() => _provider.getCategories();
   Future<int> updateStock(int productId, int newStock) =>
       _provider.updateStock(productId, newStock);
+  Future<int> updateSoldQuantity(int productId, int additionalQuantity) {
+    return _provider.updateSoldQuantity(productId, additionalQuantity);
+  }
 
   Future<List<ProductModel>> getProductsPaginated({
     required int offset,

@@ -55,6 +55,32 @@ class ProductProvider {
     return results.map((map) => ProductModel.fromMap(map)).toList();
   }
 
+  Future<int> updateSoldQuantity(int productId, int additionalQuantity) async {
+    final db = await _db;
+
+    final result = await db.query(
+      'products',
+      columns: ['soldQuantity'],
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
+
+    if (result.isEmpty) return 0;
+
+    final currentSold = result.first['soldQuantity'] as int;
+    final newSold = currentSold + additionalQuantity;
+
+    return await db.update(
+      'products',
+      {
+        'soldQuantity': newSold,
+        'updatedAt': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
+  }
+
   Future<List<ProductModel>> filterByCategory(String category) async {
     final db = await _db;
     final results = await db.query(

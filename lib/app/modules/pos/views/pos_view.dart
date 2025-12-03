@@ -180,24 +180,24 @@ class PosView extends GetView<PosController> {
                   underline: const SizedBox(),
                   items: const [
                     DropdownMenuItem(
-                      value: 'popular',
-                      child: Text('Paling Populer'),
+                      value: 'best_seller',
+                      child: Text('🔥 Paling Laku'),
                     ),
                     DropdownMenuItem(
                       value: 'name',
-                      child: Text('Nama A-Z'),
+                      child: Text('🔤 Nama A-Z'),
                     ),
                     DropdownMenuItem(
                       value: 'price_low',
-                      child: Text('Harga Terendah'),
+                      child: Text('💰 Harga Terendah'),
                     ),
                     DropdownMenuItem(
                       value: 'price_high',
-                      child: Text('Harga Tertinggi'),
+                      child: Text('💎 Harga Tertinggi'),
                     ),
                     DropdownMenuItem(
                       value: 'stock',
-                      child: Text('Stok Terbanyak'),
+                      child: Text('📦 Stok Terbanyak'),
                     ),
                   ],
                   onChanged: (value) {

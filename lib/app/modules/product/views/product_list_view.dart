@@ -227,14 +227,22 @@ class ProductListView extends GetView<ProductController> {
                   ),
                 ),
                 const SizedBox(width: AppTheme.spacing8),
-                CustomBadge(
-                  text: 'Stok: ${product.stock}',
-                  backgroundColor: product.isLowStock
-                      ? AppTheme.error.withOpacity(0.1)
-                      : AppTheme.success.withOpacity(0.1),
-                  textColor:
-                      product.isLowStock ? AppTheme.error : AppTheme.success,
-                ),
+                // CustomBadge(
+                //   text: 'Stok: ${product.stock}',
+                //   backgroundColor: product.isLowStock
+                //       ? AppTheme.error.withOpacity(0.1)
+                //       : AppTheme.success.withOpacity(0.1),
+                //   textColor:
+                //       product.isLowStock ? AppTheme.error : AppTheme.success,
+                // ),
+                const SizedBox(width: AppTheme.spacing8),
+                if (product.soldQuantity > 0)
+                  CustomBadge(
+                    text: 'Terjual: ${product.soldQuantity}',
+                    backgroundColor: AppTheme.info.withOpacity(0.1),
+                    textColor: AppTheme.info,
+                    icon: Icons.trending_up,
+                  ),
               ],
             ),
           ],

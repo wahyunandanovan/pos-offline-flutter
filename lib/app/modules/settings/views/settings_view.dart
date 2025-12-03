@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_offline/app/core/services/store_settings_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/custom_card.dart';
+import '../../../core/widgets/custom_button.dart';
+import '../../../core/widgets/custom_text_field.dart';
 import '../../auth/auth_controller.dart';
 import '../settings_controller.dart';
 
@@ -73,6 +77,38 @@ class SettingsView extends GetView<SettingsController> {
           ),
           const SizedBox(height: AppTheme.spacing24),
 
+          // Store Settings Section (Admin Only)
+          if (user.isAdmin) ...[
+            const Text(
+              'Pengaturan Toko',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacing12),
+            CustomCard(
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(AppTheme.spacing8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryLight.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                  ),
+                  child: const Icon(
+                    Icons.store,
+                    color: AppTheme.primaryLight,
+                  ),
+                ),
+                title: const Text('Info Toko'),
+                subtitle: const Text('Atur nama, alamat, dan logo toko'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () => _showStoreSettingsDialog(context),
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacing24),
+          ],
+
           // Theme Section
           const Text(
             'Tampilan',
@@ -130,7 +166,7 @@ class SettingsView extends GetView<SettingsController> {
                 _buildInfoTile(
                   icon: Icons.info_outline,
                   title: 'Versi',
-                  subtitle: '1.0.0',
+                  subtitle: '1.3.0',
                 ),
                 const Divider(),
                 _buildInfoTile(
@@ -147,45 +183,224 @@ class SettingsView extends GetView<SettingsController> {
               ],
             ),
           ),
-          const SizedBox(height: AppTheme.spacing24),
-
-          // Database Section (Admin Only)
-          if (user.isAdmin) ...[
-            const Text(
-              'Database',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.error,
-              ),
-            ),
-            const SizedBox(height: AppTheme.spacing12),
-            CustomCard(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading:
-                        const Icon(Icons.delete_forever, color: AppTheme.error),
-                    title: const Text('Hapus Semua Data'),
-                    subtitle: const Text(
-                        'Menghapus semua transaksi (Produk & User tetap ada)'),
-                    onTap: () => _showClearDataDialog(context),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.restore, color: AppTheme.warning),
-                    title: const Text('Reset Database'),
-                    subtitle:
-                        const Text('Reset database ke kondisi awal (DANGER!)'),
-                    onTap: () => _showResetDatabaseDialog(context),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
+  }
+
+  void _showStoreSettingsDialog(BuildContext context) {
+    // Reset form
+    controller.loadStoreSettings();
+    controller.selectedLogoFile.value = null;
+
+    Get.dialog(
+      Dialog(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500),
+          padding: const EdgeInsets.all(AppTheme.spacing24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.store, color: AppTheme.primaryLight),
+                    const SizedBox(width: AppTheme.spacing12),
+                    const Expanded(
+                      child: Text(
+                        'Pengaturan Toko',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Get.back(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacing24),
+
+                // Logo Section
+                _buildLogoSection(),
+                const SizedBox(height: AppTheme.spacing24),
+
+                // Store Name
+                CustomTextField(
+                  controller: controller.storeNameController,
+                  label: 'Nama Toko *',
+                  hintText: 'Masukkan nama toko',
+                  prefixIcon: Icons.store,
+                ),
+                const SizedBox(height: AppTheme.spacing16),
+
+                // Store Address
+                CustomTextField(
+                  controller: controller.storeAddressController,
+                  label: 'Alamat',
+                  hintText: 'Masukkan alamat toko',
+                  prefixIcon: Icons.location_on,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: AppTheme.spacing16),
+
+                // Store Phone
+                CustomTextField(
+                  controller: controller.storePhoneController,
+                  label: 'Telepon',
+                  hintText: 'Masukkan nomor telepon',
+                  prefixIcon: Icons.phone,
+                ),
+                const SizedBox(height: AppTheme.spacing16),
+
+                // Store Email
+                CustomTextField(
+                  controller: controller.storeEmailController,
+                  label: 'Email',
+                  hintText: 'Masukkan email',
+                  prefixIcon: Icons.email,
+                ),
+                const SizedBox(height: AppTheme.spacing24),
+
+                // Save Button
+                Obx(() => CustomButton(
+                      text: 'Simpan Pengaturan',
+                      onPressed: controller.saveStoreSettings,
+                      isLoading: controller.isSavingSettings.value,
+                      icon: Icons.save,
+                    )),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoSection() {
+    final storeSettings = Get.find<StoreSettingsService>();
+
+    return Obx(() {
+      final selectedLogo = controller.selectedLogoFile.value;
+      final existingLogo = storeSettings.storeLogoPath.value;
+      final hasLogo = selectedLogo != null || existingLogo != null;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Logo Toko',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacing8),
+          Container(
+            height: 150,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: hasLogo
+                ? Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusMedium),
+                        child: selectedLogo != null
+                            ? Image.file(
+                                selectedLogo,
+                                width: double.infinity,
+                                height: 150,
+                                fit: BoxFit.contain,
+                              )
+                            : existingLogo != null
+                                ? Image.file(
+                                    File(existingLogo),
+                                    width: double.infinity,
+                                    height: 150,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Center(
+                                        child: Icon(
+                                          Icons.store,
+                                          size: 48,
+                                          color: Colors.grey,
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : const SizedBox(),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Material(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(20),
+                          child: InkWell(
+                            onTap: controller.removeStoreLogo,
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.store,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(height: AppTheme.spacing8),
+                      Text(
+                        'Belum ada logo',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: AppTheme.spacing12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => controller.pickStoreLogo(fromCamera: false),
+                  icon: const Icon(Icons.photo_library, size: 18),
+                  label: const Text('Galeri'),
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacing8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => controller.pickStoreLogo(fromCamera: true),
+                  icon: const Icon(Icons.camera_alt, size: 18),
+                  label: const Text('Kamera'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildThemeOption(
@@ -226,103 +441,6 @@ class SettingsView extends GetView<SettingsController> {
       leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
-    );
-  }
-
-  void _showClearDataDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Semua Data'),
-        content: const Text(
-          'Apakah Anda yakin ingin menghapus semua data transaksi?\n\n'
-          'Data produk dan user tidak akan terhapus.\n\n'
-          'Tindakan ini tidak dapat dibatalkan!',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              // TODO: Implement clear data
-              Get.snackbar(
-                'Berhasil',
-                'Semua data transaksi telah dihapus',
-                backgroundColor: Colors.green,
-                colorText: Colors.white,
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showResetDatabaseDialog(BuildContext context) {
-    final confirmController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Database'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'PERINGATAN! Tindakan ini akan menghapus SEMUA data termasuk:\n'
-              '• Semua transaksi\n'
-              '• Semua produk\n'
-              '• Semua user (kecuali admin default)\n\n'
-              'Database akan direset ke kondisi awal.\n\n'
-              'Ketik "RESET" untuk melanjutkan:',
-              style: TextStyle(color: AppTheme.error),
-            ),
-            const SizedBox(height: AppTheme.spacing16),
-            TextField(
-              controller: confirmController,
-              decoration: const InputDecoration(
-                hintText: 'Ketik RESET',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (confirmController.text == 'RESET') {
-                Navigator.pop(context);
-                // TODO: Implement reset database
-                Get.snackbar(
-                  'Berhasil',
-                  'Database telah direset',
-                  backgroundColor: Colors.green,
-                  colorText: Colors.white,
-                );
-              } else {
-                Get.snackbar(
-                  'Error',
-                  'Konfirmasi salah',
-                  backgroundColor: Colors.red,
-                  colorText: Colors.white,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-            child: const Text('Reset Database'),
-          ),
-        ],
-      ),
     );
   }
 }

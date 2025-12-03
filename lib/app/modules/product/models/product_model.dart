@@ -8,6 +8,7 @@ class ProductModel {
   final double sellPrice;
   final int stock;
   final int minStock;
+  final int soldQuantity;
   final String? barcode;
   final String? imagePath;
   final bool isActive;
@@ -24,6 +25,7 @@ class ProductModel {
     required this.sellPrice,
     required this.stock,
     this.minStock = 0,
+    this.soldQuantity = 0,
     this.barcode,
     this.imagePath,
     this.isActive = true,
@@ -42,6 +44,7 @@ class ProductModel {
       sellPrice: (map['sellPrice'] as num).toDouble(),
       stock: map['stock'],
       minStock: map['minStock'] ?? 0,
+      soldQuantity: map['soldQuantity'] ?? 0,
       barcode: map['barcode'],
       imagePath: map['imagePath'],
       isActive: map['isActive'] == 1,
@@ -61,6 +64,7 @@ class ProductModel {
       'sellPrice': sellPrice,
       'stock': stock,
       'minStock': minStock,
+      'soldQuantity': soldQuantity,
       'barcode': barcode,
       'imagePath': imagePath,
       'isActive': isActive ? 1 : 0,
@@ -79,6 +83,7 @@ class ProductModel {
     double? sellPrice,
     int? stock,
     int? minStock,
+    int? soldQuantity,
     String? barcode,
     String? imagePath,
     bool? isActive,
@@ -95,6 +100,7 @@ class ProductModel {
       sellPrice: sellPrice ?? this.sellPrice,
       stock: stock ?? this.stock,
       minStock: minStock ?? this.minStock,
+      soldQuantity: soldQuantity ?? this.soldQuantity,
       barcode: barcode ?? this.barcode,
       imagePath: imagePath ?? this.imagePath,
       isActive: isActive ?? this.isActive,
@@ -106,4 +112,5 @@ class ProductModel {
   double get profit => sellPrice - buyPrice;
   double get profitMargin => (profit / buyPrice) * 100;
   bool get isLowStock => stock <= minStock;
+  bool get isPopular => soldQuantity > 10;
 }

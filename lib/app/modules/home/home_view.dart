@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_offline/app/core/services/store_settings_service.dart';
 import 'package:pos_offline/app/modules/reports/views/reports_view.dart';
 import '../../core/theme/app_theme.dart';
 import '../../routes/app_routes.dart';
@@ -34,6 +37,7 @@ class HomeView extends GetView<HomeController> {
   }
 
   Widget _buildDesktopLayout(user) {
+    final storeSettings = Get.find<StoreSettingsService>();
     final pages = _getPages(user);
 
     return Scaffold(
@@ -47,26 +51,53 @@ class HomeView extends GetView<HomeController> {
               padding: const EdgeInsets.all(AppTheme.spacing16),
               child: Column(
                 children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundColor: AppTheme.primaryLight,
-                    child: Icon(
-                      Icons.shopping_cart,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
+                  Obx(() {
+                    final logoPath = storeSettings.storeLogoPath.value;
+                    if (logoPath != null && logoPath.isNotEmpty) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: Image.file(
+                          File(logoPath),
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const CircleAvatar(
+                              radius: 30,
+                              backgroundColor: AppTheme.primaryLight,
+                              child: Icon(
+                                Icons.shopping_cart,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }
+                    return const CircleAvatar(
+                      radius: 30,
+                      backgroundColor: AppTheme.primaryLight,
+                      child: Icon(
+                        Icons.shopping_cart,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    );
+                  }),
                   const SizedBox(height: AppTheme.spacing8),
-                  const Text(
-                    'POS Offline',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
+                  Obx(() => Text(
+                        storeSettings.storeName.value,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                        textAlign: TextAlign.center,
+                      )),
                   Text(
                     user.fullName,
                     style: const TextStyle(fontSize: 12),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),

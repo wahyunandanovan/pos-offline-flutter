@@ -21,7 +21,7 @@ class PosController extends GetxController {
   var hasMoreData = true.obs;
 
 //Sorting
-  final sortBy = 'popular'.obs;
+  final sortBy = 'best_seller'.obs;
 
   // Product catalog
   final products = <ProductModel>[].obs;
@@ -169,15 +169,9 @@ class PosController extends GetxController {
 
   void applySorting() {
     switch (sortBy.value) {
-      case 'popular':
-        // Sort by most frequently sold (you can track this in a separate table)
-        // For now, we'll use a simple heuristic: products with lower stock are more popular
-        filteredProducts.sort((a, b) {
-          // Products with less stock relative to their initial stock are more popular
-          final aPopularity = (a.stock < a.minStock * 2) ? 1 : 0;
-          final bPopularity = (b.stock < b.minStock * 2) ? 1 : 0;
-          return bPopularity.compareTo(aPopularity);
-        });
+      case 'best_seller':
+        filteredProducts
+            .sort((a, b) => b.soldQuantity.compareTo(a.soldQuantity));
         break;
       case 'name':
         filteredProducts.sort((a, b) => a.name.compareTo(b.name));
@@ -321,6 +315,11 @@ class PosController extends GetxController {
 
         final newStock = cartItem.product.stock - cartItem.quantity;
         await productRepository.updateStock(cartItem.product.id!, newStock);
+
+        await productRepository.updateSoldQuantity(
+          cartItem.product.id!,
+          cartItem.quantity,
+        );
       }
 
       await _showSuccessDialog(transaction);
