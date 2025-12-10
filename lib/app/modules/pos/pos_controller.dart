@@ -20,13 +20,14 @@ class PosController extends GetxController {
   var currentPage = 0;
   var hasMoreData = true.obs;
 
-//Sorting
+  // Sorting
   final sortBy = 'best_seller'.obs;
 
   // Product catalog
   final products = <ProductModel>[].obs;
   final filteredProducts = <ProductModel>[].obs;
   final searchQuery = ''.obs;
+  final searchController = TextEditingController();
 
   // Cart
   final cartItems = <CartItemModel>[].obs;
@@ -76,6 +77,7 @@ class PosController extends GetxController {
   @override
   void onClose() {
     scrollController.dispose();
+    searchController.dispose();
     super.onClose();
   }
 
@@ -106,9 +108,10 @@ class PosController extends GetxController {
       );
 
       products.value = result;
-      filteredProducts.value = result;
 
-      applySorting();
+      // Apply sorting immediately after loading
+      _sortProducts(result);
+      filteredProducts.value = result;
 
       hasMoreData.value = result.length >= pageSize;
       currentPage = 1;
@@ -132,11 +135,11 @@ class PosController extends GetxController {
       );
 
       if (result.isNotEmpty) {
+        // Sort new items before adding to maintain consistency
+        _sortProducts(result);
+
         products.addAll(result);
         filteredProducts.addAll(result);
-
-        // Apply sorting after adding new items
-        applySorting();
 
         currentPage++;
         hasMoreData.value = result.length >= pageSize;
@@ -155,6 +158,12 @@ class PosController extends GetxController {
     loadProducts(refresh: true);
   }
 
+  void clearSearch() {
+    searchController.clear();
+    searchQuery.value = '';
+    loadProducts(refresh: true);
+  }
+
   int getProductQuantityInCart(int productId) {
     final cartItem =
         cartItems.firstWhereOrNull((item) => item.product.id == productId);
@@ -163,29 +172,34 @@ class PosController extends GetxController {
 
   void changeSortBy(String newSortBy) {
     sortBy.value = newSortBy;
-    applySorting();
+
+    // Re-sort all loaded products
+    _sortProducts(filteredProducts);
     filteredProducts.refresh();
   }
 
-  void applySorting() {
+  void _sortProducts(List<ProductModel> productList) {
     switch (sortBy.value) {
       case 'best_seller':
-        filteredProducts
-            .sort((a, b) => b.soldQuantity.compareTo(a.soldQuantity));
+        productList.sort((a, b) => b.soldQuantity.compareTo(a.soldQuantity));
         break;
       case 'name':
-        filteredProducts.sort((a, b) => a.name.compareTo(b.name));
+        productList.sort((a, b) => a.name.compareTo(b.name));
         break;
       case 'price_low':
-        filteredProducts.sort((a, b) => a.sellPrice.compareTo(b.sellPrice));
+        productList.sort((a, b) => a.sellPrice.compareTo(b.sellPrice));
         break;
       case 'price_high':
-        filteredProducts.sort((a, b) => b.sellPrice.compareTo(a.sellPrice));
+        productList.sort((a, b) => b.sellPrice.compareTo(a.sellPrice));
         break;
       case 'stock':
-        filteredProducts.sort((a, b) => b.stock.compareTo(a.stock));
+        productList.sort((a, b) => b.stock.compareTo(a.stock));
         break;
     }
+  }
+
+  void applySorting() {
+    _sortProducts(filteredProducts);
   }
 
   void addToCart(ProductModel product) {
@@ -213,13 +227,13 @@ class PosController extends GetxController {
     cartItems.refresh();
 
     // Show feedback
-    Get.snackbar(
-      'Ditambahkan',
-      '${product.name} ditambahkan ke keranjang',
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 1),
-    );
+    // Get.snackbar(
+    //   'Ditambahkan',
+    //   '${product.name} ditambahkan ke keranjang',
+    //   backgroundColor: Colors.green,
+    //   colorText: Colors.white,
+    //   duration: const Duration(seconds: 1),
+    // );
   }
 
   void updateQuantity(CartItemModel item, int newQty) {

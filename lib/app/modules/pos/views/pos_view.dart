@@ -23,6 +23,7 @@ class PosView extends GetView<PosController> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.shopping_cart),
+                    padding: const EdgeInsets.all(12),
                     onPressed:
                         isTablet ? null : () => _showCartBottomSheet(context),
                   ),
@@ -102,18 +103,26 @@ class PosView extends GetView<PosController> {
           padding: const EdgeInsets.all(AppTheme.spacing16),
           child: Column(
             children: [
-              CustomTextField(
-                hintText: 'Cari produk...',
-                prefixIcon: Icons.search,
-                onChanged: (value) {
-                  Future.delayed(const Duration(milliseconds: 500), () {
-                    if (controller.searchQuery.value == value) {
-                      controller.searchProducts(value);
-                    }
-                  });
-                  controller.searchQuery.value = value;
-                },
-              ),
+              // SEARCH FIELD WITH CLEAR BUTTON
+              Obx(() => CustomTextField(
+                    controller: controller.searchController,
+                    hintText: 'Cari produk...',
+                    prefixIcon: Icons.search,
+                    suffixIcon: controller.searchQuery.value.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: controller.clearSearch,
+                          )
+                        : null,
+                    onChanged: (value) {
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        if (controller.searchQuery.value == value) {
+                          controller.searchProducts(value);
+                        }
+                      });
+                      controller.searchQuery.value = value;
+                    },
+                  )),
               const SizedBox(height: AppTheme.spacing12),
 
               // SORT DROPDOWN
@@ -127,7 +136,9 @@ class PosView extends GetView<PosController> {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (controller.filteredProducts.isEmpty) {
+            final displayProducts = controller.filteredProducts;
+
+            if (displayProducts.isEmpty) {
               return const Center(child: Text('Tidak ada produk'));
             }
 
@@ -141,16 +152,16 @@ class PosView extends GetView<PosController> {
                 crossAxisSpacing: AppTheme.spacing12,
                 mainAxisSpacing: AppTheme.spacing12,
               ),
-              itemCount: controller.filteredProducts.length +
+              itemCount: displayProducts.length +
                   (controller.hasMoreData.value ? 1 : 0),
               itemBuilder: (context, index) {
-                if (index == controller.filteredProducts.length) {
+                if (index == displayProducts.length) {
                   return Obx(() => controller.isLoadingMore.value
                       ? const Center(child: CircularProgressIndicator())
                       : const SizedBox.shrink());
                 }
 
-                final product = controller.filteredProducts[index];
+                final product = displayProducts[index];
                 return _buildProductCard(product);
               },
             );
@@ -347,11 +358,10 @@ class PosView extends GetView<PosController> {
     });
   }
 
-  // ... (rest of the cart methods remain the same as before)
-
   Widget _buildCartSection() {
     return Column(
       children: [
+        // Header Keranjang
         Container(
           padding: const EdgeInsets.all(AppTheme.spacing16),
           decoration: BoxDecoration(
@@ -388,6 +398,8 @@ class PosView extends GetView<PosController> {
             ],
           ),
         ),
+
+        // List Cart Items
         Expanded(
           child: Obx(() {
             if (controller.cartItems.isEmpty) {
@@ -429,6 +441,8 @@ class PosView extends GetView<PosController> {
             );
           }),
         ),
+
+        // Checkout Section
         Obx(() => controller.cartItems.isEmpty
             ? const SizedBox.shrink()
             : _buildCheckoutSection()),
@@ -517,16 +531,15 @@ class PosView extends GetView<PosController> {
         Container(
           padding: const EdgeInsets.all(AppTheme.spacing8),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: AppTheme.primaryLight.withOpacity(0.1),
             borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
           ),
           child: Row(
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                ),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                    color: AppTheme.backgroundLight),
                 child: Row(
                   children: [
                     IconButton(
@@ -551,6 +564,7 @@ class PosView extends GetView<PosController> {
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          color: AppTheme.primaryLight,
                         ),
                       ),
                     ),
@@ -617,25 +631,25 @@ class PosView extends GetView<PosController> {
         child: Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Obx(() => Text(
+              child: Obx(() => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
                         '${controller.totalItems} item',
                         style: const TextStyle(fontSize: 12),
-                      )),
-                  const Text('Total'),
-                  Obx(() => Text(
+                      ),
+                      const Text('Total'),
+                      Text(
                         controller.currencyFormat.format(controller.total),
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.primaryLight,
                         ),
-                      )),
-                ],
-              ),
+                      ),
+                    ],
+                  )),
             ),
             ElevatedButton.icon(
               onPressed: () => _showCheckoutDialog(),
@@ -662,48 +676,48 @@ class PosView extends GetView<PosController> {
           top: BorderSide(color: Colors.grey.shade300, width: 2),
         ),
       ),
-      child: Column(
-        children: [
-          _buildSummaryRow('Subtotal', controller.subtotal),
-          _buildSummaryRow('Diskon', -controller.transactionDiscount.value),
-          _buildSummaryRow('Pajak', controller.taxAmount),
-          const Divider(thickness: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Obx(() => Column(
             children: [
-              const Text(
-                'Total',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Obx(() => Text(
+              _buildSummaryRow('Subtotal', controller.subtotal),
+              _buildSummaryRow('Diskon', -controller.transactionDiscount.value),
+              _buildSummaryRow('Pajak', controller.taxAmount),
+              const Divider(thickness: 2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
                     controller.currencyFormat.format(controller.total),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryLight,
                     ),
-                  )),
-            ],
-          ),
-          const SizedBox(height: AppTheme.spacing16),
-          Obx(() => CustomButton(
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppTheme.spacing16),
+              CustomButton(
                 text: 'Proses Pembayaran',
                 onPressed: () => _showCheckoutDialog(),
                 isLoading: controller.isProcessing.value,
                 icon: Icons.payment,
-              )),
-          const SizedBox(height: AppTheme.spacing8),
-          CustomButton(
-            text: 'Kosongkan Keranjang',
-            onPressed: controller.clearCart,
-            isOutlined: true,
-            icon: Icons.delete_sweep,
-          ),
-        ],
-      ),
+              ),
+              const SizedBox(height: AppTheme.spacing8),
+              CustomButton(
+                text: 'Kosongkan Keranjang',
+                onPressed: controller.clearCart,
+                isOutlined: true,
+                icon: Icons.delete_sweep,
+              ),
+            ],
+          )),
     );
   }
 
@@ -714,10 +728,10 @@ class PosView extends GetView<PosController> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          Obx(() => Text(
-                controller.currencyFormat.format(amount),
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              )),
+          Text(
+            controller.currencyFormat.format(amount),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
@@ -750,26 +764,26 @@ class PosView extends GetView<PosController> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                padding: const EdgeInsets.all(AppTheme.spacing16),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryLight.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                ),
-                child: Column(
-                  children: [
-                    const Text('Total Bayar'),
-                    Obx(() => Text(
+              Obx(() => Container(
+                    padding: const EdgeInsets.all(AppTheme.spacing16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryLight.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text('Total Bayar'),
+                        Text(
                           controller.currencyFormat.format(controller.total),
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryLight,
                           ),
-                        )),
-                  ],
-                ),
-              ),
+                        ),
+                      ],
+                    ),
+                  )),
               const SizedBox(height: AppTheme.spacing16),
               Obx(() => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
