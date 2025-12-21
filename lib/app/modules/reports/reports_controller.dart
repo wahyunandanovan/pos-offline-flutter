@@ -66,11 +66,15 @@ class ReportsController extends GetxController {
   }
 
   Future<void> _loadSummary() async {
-    final summary = await repository.getSalesSummary(
-      startDate.value,
-      endDate.value.add(const Duration(days: 1)),
-    );
-    reportSummary.value = summary;
+    try {
+      final summary = await repository.getSalesSummary(
+        startDate.value,
+        endDate.value.add(const Duration(days: 1)),
+      );
+      reportSummary.value = summary;
+    } catch (e) {
+      print('pppppppppp${e}');
+    }
   }
 
   Future<void> _loadSalesByProduct() async {

@@ -127,6 +127,7 @@ class ProductProvider {
     required int limit,
     String? searchQuery,
     String? category,
+    String sortBy = 'best_seller',
   }) async {
     final db = await _db;
 
@@ -143,11 +144,33 @@ class ProductProvider {
       whereArgs.add(category);
     }
 
+    // Determine ORDER BY clause based on sortBy parameter
+    String orderByClause;
+    switch (sortBy) {
+      case 'best_seller':
+        orderByClause = 'soldQuantity DESC';
+        break;
+      case 'name':
+        orderByClause = 'name ASC';
+        break;
+      case 'price_low':
+        orderByClause = 'sellPrice ASC';
+        break;
+      case 'price_high':
+        orderByClause = 'sellPrice DESC';
+        break;
+      case 'stock':
+        orderByClause = 'stock DESC';
+        break;
+      default:
+        orderByClause = 'soldQuantity DESC';
+    }
+
     final results = await db.query(
       'products',
       where: whereClause,
       whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
-      orderBy: 'name ASC',
+      orderBy: orderByClause,
       limit: limit,
       offset: offset,
     );

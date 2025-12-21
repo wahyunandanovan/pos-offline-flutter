@@ -31,12 +31,14 @@ class ProductRepository {
     required int limit,
     String? searchQuery,
     String? category,
+    String sortBy = 'best_seller',
   }) {
     return _provider.getProductsPaginated(
       offset: offset,
       limit: limit,
       searchQuery: searchQuery,
       category: category,
+      sortBy: sortBy,
     );
   }
 }

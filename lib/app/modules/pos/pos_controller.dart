@@ -105,12 +105,10 @@ class PosController extends GetxController {
         offset: 0,
         limit: pageSize,
         searchQuery: searchQuery.value,
+        sortBy: sortBy.value,
       );
 
       products.value = result;
-
-      // Apply sorting immediately after loading
-      _sortProducts(result);
       filteredProducts.value = result;
 
       hasMoreData.value = result.length >= pageSize;
@@ -132,12 +130,10 @@ class PosController extends GetxController {
         offset: currentPage * pageSize,
         limit: pageSize,
         searchQuery: searchQuery.value,
+        sortBy: sortBy.value,
       );
 
       if (result.isNotEmpty) {
-        // Sort new items before adding to maintain consistency
-        _sortProducts(result);
-
         products.addAll(result);
         filteredProducts.addAll(result);
 
@@ -172,34 +168,7 @@ class PosController extends GetxController {
 
   void changeSortBy(String newSortBy) {
     sortBy.value = newSortBy;
-
-    // Re-sort all loaded products
-    _sortProducts(filteredProducts);
-    filteredProducts.refresh();
-  }
-
-  void _sortProducts(List<ProductModel> productList) {
-    switch (sortBy.value) {
-      case 'best_seller':
-        productList.sort((a, b) => b.soldQuantity.compareTo(a.soldQuantity));
-        break;
-      case 'name':
-        productList.sort((a, b) => a.name.compareTo(b.name));
-        break;
-      case 'price_low':
-        productList.sort((a, b) => a.sellPrice.compareTo(b.sellPrice));
-        break;
-      case 'price_high':
-        productList.sort((a, b) => b.sellPrice.compareTo(a.sellPrice));
-        break;
-      case 'stock':
-        productList.sort((a, b) => b.stock.compareTo(a.stock));
-        break;
-    }
-  }
-
-  void applySorting() {
-    _sortProducts(filteredProducts);
+    loadProducts(refresh: true);
   }
 
   void addToCart(ProductModel product) {
@@ -225,15 +194,6 @@ class PosController extends GetxController {
     }
 
     cartItems.refresh();
-
-    // Show feedback
-    // Get.snackbar(
-    //   'Ditambahkan',
-    //   '${product.name} ditambahkan ke keranjang',
-    //   backgroundColor: Colors.green,
-    //   colorText: Colors.white,
-    //   duration: const Duration(seconds: 1),
-    // );
   }
 
   void updateQuantity(CartItemModel item, int newQty) {

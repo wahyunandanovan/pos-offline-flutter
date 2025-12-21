@@ -43,11 +43,13 @@ class ReportProvider {
     ''', [startDate.toIso8601String(), endDate.toIso8601String()]);
 
     return {
-      'totalSales': salesResult.first['totalSales'] as double,
-      'totalTransactions': salesResult.first['totalTransactions'] as int,
-      'totalItems': itemsResult.first['totalItems'] as int,
-      'averageTransaction': salesResult.first['averageTransaction'] as double,
-      'totalProfit': profitResult.first['totalProfit'] as double,
+      'totalSales': (salesResult.first['totalSales'] as num).toDouble(),
+      'totalTransactions':
+          (salesResult.first['totalTransactions'] as num).toInt(),
+      'totalItems': (itemsResult.first['totalItems'] as num).toInt(),
+      'averageTransaction':
+          (salesResult.first['averageTransaction'] as num).toDouble(),
+      'totalProfit': (profitResult.first['totalProfit'] as num).toDouble(),
     };
   }
 
