@@ -296,7 +296,13 @@ class PosController extends GetxController {
         );
       }
 
+      // Tutup modal pembayaran terlebih dahulu
+      Get.back();
+
+      // Tampilkan dialog sukses
       await _showSuccessDialog(transaction);
+
+      // Clear cart dan reload
       clearCart();
       await loadProducts(refresh: true);
       await loadTransactions();

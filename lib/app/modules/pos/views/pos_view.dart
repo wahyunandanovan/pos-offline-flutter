@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
@@ -755,6 +756,11 @@ class PosView extends GetView<PosController> {
 
   void _showCheckoutDialog() {
     final paidController = TextEditingController();
+    final discountController = TextEditingController();
+
+    // Reset payment values
+    controller.paidAmount.value = 0;
+    controller.transactionDiscount.value = 0;
 
     Get.dialog(
       AlertDialog(
@@ -764,6 +770,7 @@ class PosView extends GetView<PosController> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Total Bayar
               Obx(() => Container(
                     padding: const EdgeInsets.all(AppTheme.spacing16),
                     decoration: BoxDecoration(
@@ -785,16 +792,22 @@ class PosView extends GetView<PosController> {
                     ),
                   )),
               const SizedBox(height: AppTheme.spacing16),
+
+              // Metode Pembayaran
               Obx(() => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Metode Pembayaran'),
+                      const Text(
+                        'Metode Pembayaran',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                       RadioListTile<String>(
                         title: const Text('Tunai'),
                         value: 'Tunai',
                         groupValue: controller.paymentMethod.value,
                         onChanged: (value) =>
                             controller.paymentMethod.value = value!,
+                        contentPadding: EdgeInsets.zero,
                       ),
                       RadioListTile<String>(
                         title: const Text('Kartu Debit/Kredit'),
@@ -802,22 +815,84 @@ class PosView extends GetView<PosController> {
                         groupValue: controller.paymentMethod.value,
                         onChanged: (value) =>
                             controller.paymentMethod.value = value!,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('Transfer Bank'),
+                        value: 'Transfer',
+                        groupValue: controller.paymentMethod.value,
+                        onChanged: (value) =>
+                            controller.paymentMethod.value = value!,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('E-Wallet'),
+                        value: 'E-Wallet',
+                        groupValue: controller.paymentMethod.value,
+                        onChanged: (value) =>
+                            controller.paymentMethod.value = value!,
+                        contentPadding: EdgeInsets.zero,
                       ),
                     ],
                   )),
               const SizedBox(height: AppTheme.spacing16),
+
+              // Input Diskon
               CustomTextField(
-                controller: paidController,
-                label: 'Jumlah Bayar',
-                hintText: '0',
+                controller: discountController,
+                label: 'Diskon Transaksi (Opsional)',
+                hintText: 'Rp 0',
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                prefixIcon: Icons.money,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  _CurrencyInputFormatter(),
+                ],
+                prefixIcon: Icons.discount,
                 onChanged: (value) {
-                  controller.paidAmount.value = double.tryParse(value) ?? 0;
+                  // Remove non-numeric characters
+                  final numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+                  controller.transactionDiscount.value =
+                      double.tryParse(numericValue) ?? 0;
                 },
               ),
               const SizedBox(height: AppTheme.spacing16),
+
+              // Input Jumlah Bayar dengan Format Currency
+              CustomTextField(
+                controller: paidController,
+                label: 'Jumlah Bayar',
+                hintText: 'Rp 0',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  _CurrencyInputFormatter(),
+                ],
+                prefixIcon: Icons.money,
+                onChanged: (value) {
+                  // Remove non-numeric characters
+                  final numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+                  controller.paidAmount.value =
+                      double.tryParse(numericValue) ?? 0;
+                },
+              ),
+              const SizedBox(height: AppTheme.spacing8),
+
+              // Quick Amount Buttons
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildQuickAmountButton(
+                      paidController, controller.total, 'Uang Pas'),
+                  _buildQuickAmountButton(paidController, 50000, '50K'),
+                  _buildQuickAmountButton(paidController, 100000, '100K'),
+                  _buildQuickAmountButton(paidController, 200000, '200K'),
+                  _buildQuickAmountButton(paidController, 500000, '500K'),
+                ],
+              ),
+              const SizedBox(height: AppTheme.spacing16),
+
+              // Kembalian
               Obx(() {
                 final change = controller.change;
                 return Container(
@@ -849,7 +924,10 @@ class PosView extends GetView<PosController> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () {
+              Get.back();
+              controller.transactionDiscount.value = 0;
+            },
             child: const Text('Batal'),
           ),
           Obx(() => ElevatedButton(
@@ -865,6 +943,52 @@ class PosView extends GetView<PosController> {
               )),
         ],
       ),
+    );
+  }
+
+  Widget _buildQuickAmountButton(
+      TextEditingController controller, double amount, String label) {
+    return ElevatedButton(
+      onPressed: () {
+        final formatter = NumberFormat('#,###', 'id_ID');
+        final formattedAmount = 'Rp ${formatter.format(amount)}';
+        controller.text = formattedAmount;
+        this.controller.paidAmount.value = amount;
+      },
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        textStyle: const TextStyle(fontSize: 12),
+      ),
+      child: Text(label),
+    );
+  }
+}
+
+// Currency Input Formatter
+class _CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Remove non-numeric characters
+    final numericValue = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (numericValue.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Format with thousand separators
+    final formatter = NumberFormat('#,###', 'id_ID');
+    final formattedValue = formatter.format(int.parse(numericValue));
+
+    return TextEditingValue(
+      text: 'Rp $formattedValue',
+      selection: TextSelection.collapsed(offset: formattedValue.length + 3),
     );
   }
 }
