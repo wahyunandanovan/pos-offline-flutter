@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:pos_offline/app/core/services/store_settings_service.dart';
+import 'package:pos_offline/app/core/services/thermal_printer_service.dart';
 import 'package:pos_offline/app/core/theme/services/theme_service.dart';
 import 'package:pos_offline/app/core/utils/db_migration_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,6 +35,9 @@ void main() async {
   final storeSettings = StoreSettingsService();
   await storeSettings.init();
   Get.put(storeSettings);
+
+  // Initialize Thermal Printer Service
+  Get.put(ThermalPrinterService());
 
   runApp(const MyApp());
 }

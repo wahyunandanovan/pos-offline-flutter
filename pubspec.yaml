@@ -41,9 +41,14 @@ dependencies:
   # Permission Handler
   permission_handler: ^11.1.0
 
+  #Thermal printer
+
   # Path Provider
   path_provider: ^2.1.1
   file_picker: ^10.3.7
+  blue_thermal_printer: ^1.2.3
+  esc_pos_utils: ^1.1.0
+  image: ^3.3.0
 
 dev_dependencies:
   flutter_test:

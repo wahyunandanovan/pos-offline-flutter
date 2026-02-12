@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_offline/app/modules/printer-settings/printer_setings_view.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
@@ -20,6 +21,11 @@ class PosView extends GetView<PosController> {
       appBar: AppBar(
         title: const Text('Point of Sale'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: () => Get.to(() => const PrinterSettingsView()),
+            tooltip: 'Pengaturan Printer',
+          ),
           Obx(() => Stack(
                 children: [
                   IconButton(

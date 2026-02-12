@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_offline/app/modules/printer-settings/printer_setings_view.dart';
+import '../../core/services/thermal_printer_service.dart';
 import '../auth/auth_controller.dart';
 import '../product/models/product_model.dart';
 import '../product/repositories/product_repository.dart';
@@ -233,7 +235,7 @@ class PosController extends GetxController {
     paidAmount.value = 0;
   }
 
-  Future<void> processPayment() async {
+  Future<void> processPayment({bool withPrint = false}) async {
     if (cartItems.isEmpty) {
       Get.snackbar('Error', 'Keranjang kosong',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -273,6 +275,9 @@ class PosController extends GetxController {
       final transactionId =
           await transactionRepository.createTransaction(transaction);
 
+      // Create transaction items list for printing
+      final transactionItems = <TransactionItemModel>[];
+
       for (var cartItem in cartItems) {
         final item = TransactionItemModel(
           transactionId: transactionId,
@@ -286,6 +291,7 @@ class PosController extends GetxController {
         );
 
         await transactionRepository.createTransactionItem(item);
+        transactionItems.add(item);
 
         final newStock = cartItem.product.stock - cartItem.quantity;
         await productRepository.updateStock(cartItem.product.id!, newStock);
@@ -296,11 +302,19 @@ class PosController extends GetxController {
         );
       }
 
+      // Set the transaction ID for the created transaction
+      transaction.id = transactionId;
+
       // Tutup modal pembayaran terlebih dahulu
       Get.back();
 
+      // Print receipt if requested
+      if (withPrint) {
+        await _printReceipt(transaction, transactionItems);
+      }
+
       // Tampilkan dialog sukses
-      await _showSuccessDialog(transaction);
+      await _showSuccessDialog(transaction, transactionItems);
 
       // Clear cart dan reload
       clearCart();
@@ -314,6 +328,39 @@ class PosController extends GetxController {
     }
   }
 
+  Future<void> _printReceipt(
+    TransactionModel transaction,
+    List<TransactionItemModel> items,
+  ) async {
+    try {
+      final printerService = Get.find<ThermalPrinterService>();
+
+      // Check if printer is connected
+      if (!printerService.isConnected.value) {
+        Get.snackbar(
+          'Info',
+          'Printer tidak terhubung. Silakan hubungkan printer di pengaturan.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      await printerService.printReceipt(
+        transaction: transaction,
+        items: items,
+        storeName: 'TOKO SAYA',
+        storeAddress: 'Jl. Contoh No. 123, Kota',
+        storePhone: '08123456789',
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Gagal mencetak struk: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   Future<void> loadTransactions() async {
     try {
       final result = await transactionRepository.getAllTransactions();
@@ -323,7 +370,10 @@ class PosController extends GetxController {
     }
   }
 
-  Future<void> _showSuccessDialog(TransactionModel transaction) async {
+  Future<void> _showSuccessDialog(
+    TransactionModel transaction,
+    List<TransactionItemModel> items,
+  ) async {
     await Get.dialog(
       AlertDialog(
         title: const Row(
@@ -352,9 +402,9 @@ class PosController extends GetxController {
             child: const Text('Tutup'),
           ),
           ElevatedButton.icon(
-            onPressed: () {
+            onPressed: () async {
               Get.back();
-              Get.snackbar('Info', 'Fitur print akan segera tersedia');
+              await _printReceipt(transaction, items);
             },
             icon: const Icon(Icons.print),
             label: const Text('Print'),
@@ -362,5 +412,9 @@ class PosController extends GetxController {
         ],
       ),
     );
+  }
+
+  void openPrinterSettings() {
+    Get.to(() => const PrinterSettingsView());
   }
 }
